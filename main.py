@@ -138,8 +138,8 @@ def sort_initial_pieces(layout):
         total = len(sub_cuts)
         max_level = max((int(cut["aLevel"]) for cut in sub_cuts), default=0)
         regions.append({"region_index": idx, "total_cuts": total, "max_level": max_level})
-    # ordenar por total de cortes y luego por nivel más profundo
-    sorted_regions = sorted(regions, key=lambda r: (r["total_cuts"], r["max_level"]))
+    # ordenar por nivel más profundo y luego por total de cortes
+    sorted_regions = sorted(regions, key=lambda r: (r["max_level"], r["total_cuts"]))
     return [r["region_index"] for r in sorted_regions]
 
 def generate_region_layouts(layout):

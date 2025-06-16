@@ -1,0 +1,46 @@
+def generate_region_layouts(layout):
+    """
+    Divide el layout original en sublayouts por región de los cortes de nivel 0.
+    Retorna una lista de sublayouts en el orden natural de regiones.
+    """
+    regions_cuts = layout["cuts"]
+    initial_cuts = [cut for cut in regions_cuts if cut["aLevel"] == "0"]
+    if not initial_cuts:
+        return [layout]
+    sheetW = float(layout["sheetW"])
+    sheetH = float(layout["sheetH"])
+    orientation = get_first_cut_orientation(layout)
+    # Definir límites y funciones de región según orientación
+    if orientation == "HORIZONTAL":
+        positions = sorted(float(cut["y1"]) for cut in initial_cuts)
+        boundaries = [0.0] + positions + [sheetH]
+        def cut_in_region(cut, start, end):
+            y1, y2 = float(cut["y1"]), float(cut["y2"])
+            return min(y1, y2) >= start and max(y1, y2) <= end
+        def item_in_region(item, start, end):
+            y = float(item["y"])
+            h = float(item["length"]) if "length" in item else float(item["width"])
+            return y >= start and (y + h) <= end
+    else:  # VERTICAL o diagonal
+        positions = sorted(float(cut["x1"]) for cut in initial_cuts)
+        boundaries = [0.0] + positions + [sheetW]
+        def cut_in_region(cut, start, end):
+            x1, x2 = float(cut["x1"]), float(cut["x2"])
+            return min(x1, x2) >= start and max(x1, x2) <= end
+        def item_in_region(item, start, end):
+            x = float(item["x"])
+            w = float(item["width"])
+            return x >= start and (x + w) <= end
+    # Crear sublayouts
+    sublayouts = []
+    for idx in range(len(boundaries) - 1):
+        start, end = boundaries[idx], boundaries[idx + 1]
+        sub = {
+            "sheetW": layout["sheetW"],
+            "sheetH": layout["sheetH"],
+            "part": [p for p in layout["part"] if item_in_region(p, start, end)],
+            "cuts": [c for c in regions_cuts if cut_in_region(c, start, end)],
+            "wastePart": [w for w in layout.get("wastePart", []) if item_in_region(w, start, end)]
+        }
+        sublayouts.append(sub)
+    return sublayouts

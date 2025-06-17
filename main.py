@@ -214,6 +214,23 @@ def pack_regions(layout, regions_info):
     for region_idx, region in regions_info:
         region_start = boundaries[region_idx]
         region_end = boundaries[region_idx + 1]
+        # Insertar corte de nivel 0 en el offset actual para separar regiones
+        if orientation == "HORIZONTAL":
+            packed_cuts.append({
+                "x1": "0",
+                "y1": str(offset_main),
+                "x2": layout["sheetW"],
+                "y2": str(offset_main),
+                "aLevel": "0"
+            })
+        else:
+            packed_cuts.append({
+                "x1": str(offset_main),
+                "y1": "0",
+                "x2": str(offset_main),
+                "y2": layout["sheetH"],
+                "aLevel": "0"
+            })
         # determinar si tiene hijos (cortes de nivel >0) o piezas hijas
         has_children = any(int(c.get("aLevel","0")) > 0 for c in region.get("cuts", []))
         if not has_children:
@@ -281,7 +298,13 @@ if __name__ == "__main__":
             sorted_regions = sort_initial_pieces(layout)
             region_layouts = generate_region_layouts(layout)
             # Combinar regiones en un plano optimizado
-            valid_regions = [(idx, region_layouts[idx]) for idx in sorted_regions if any(int(c.get("aLevel","0"))>0 for c in region_layouts[idx].get("cuts", []))]
+            valid_regions = []
+            for idx in sorted_regions:
+                region = region_layouts[idx]
+                has_cut_children = any(int(c.get("aLevel", "0")) > 0 for c in region["cuts"])
+                has_scrap = bool(region.get("wastePart"))
+                if has_cut_children or has_scrap:
+                    valid_regions.append((idx, region))
             optimized_layout = pack_regions(layout, valid_regions)
             print(f"🎯 Plano optimizado combinado {i+1}.{j+1}")
             draw_layout(optimized_layout, (i, j, 'opt'))

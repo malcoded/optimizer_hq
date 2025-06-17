@@ -120,26 +120,32 @@ def sort_initial_pieces(layout):
         def in_region(cut, start, end):
             y1, y2 = float(cut["y1"]), float(cut["y2"])
             return min(y1, y2) >= start and max(y1, y2) <= end
+        def part_in_region(part, start, end):
+            y = float(part["y"])
+            h = float(part["length"])
+            return y >= start and (y + h) <= end
     elif orientation == "VERTICAL":
         positions = sorted(float(cut["x1"]) for cut in initial_cuts)
         boundaries = [0.0] + positions + [sheetW]
         def in_region(cut, start, end):
             x1, x2 = float(cut["x1"]), float(cut["x2"])
             return min(x1, x2) >= start and max(x1, x2) <= end
+        def part_in_region(part, start, end):
+            x = float(part["x"])
+            w = float(part["width"])
+            return x >= start and (x + w) <= end
     else:
         # si no es estrictamente HORIZONTAL ni VERTICAL, devolver orden natural
         return list(range(len(initial_cuts)))
-    # calcular métricas por región
+
     regions = []
     for idx in range(len(boundaries) - 1):
         start, end = boundaries[idx], boundaries[idx + 1]
-        # cortes posteriores dentro de esta región
-        sub_cuts = [cut for cut in cuts if cut["aLevel"] != "0" and in_region(cut, start, end)]
-        total = len(sub_cuts)
-        max_level = max((int(cut["aLevel"]) for cut in sub_cuts), default=0)
-        regions.append({"region_index": idx, "total_cuts": total, "max_level": max_level})
-    # ordenar por nivel más profundo y luego por total de cortes
-    sorted_regions = sorted(regions, key=lambda r: (r["max_level"], r["total_cuts"]))
+        # Tamaño de la tira de nivel 0
+        size = end - start
+        regions.append({"region_index": idx, "size": size})
+    # Ordenar tiras por tamaño descendente
+    sorted_regions = sorted(regions, key=lambda r: r["size"], reverse=True)
     return [r["region_index"] for r in sorted_regions]
 
 def generate_region_layouts(layout):
